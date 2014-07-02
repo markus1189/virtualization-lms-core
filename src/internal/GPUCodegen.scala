@@ -25,18 +25,18 @@ trait GPUCodegen extends CLikeCodegen with AbstractHostTransfer with AbstractDev
   var isGPUable:Boolean = false
   var processingHelperFunc: Boolean = false
   var isNestedNode: Boolean = false
-  var outerLoopSize: Exp[Int] = null
-  var outerLoopSym: Exp[Int] = null
+  var outerLoopSize: Exp[Long] = null
+  var outerLoopSym: Exp[Long] = null
 
   //TODO: Get rid of this variable
   protected var inVars = List[Sym[Any]]()
-  protected val boundMap = HashMap[Exp[Int],Exp[Int]]()
+  protected val boundMap = HashMap[Exp[Long],Exp[Long]]()
   private val ptrSymSet = HashSet[Sym[Any]]()
  
   // GPU currently does not use reference types
   override def remapWithRef[A](m: Manifest[A]): String = remap(m)
 
-  protected def registerTempAlloc(sym:Sym[Any], tp:Manifest[Any], size:Exp[Int]):String = {
+  protected def registerTempAlloc(sym:Sym[Any], tp:Manifest[Any], size:Exp[Long]):String = {
     metaData.temps prepend TempAlloc(quote(sym)+"_temp",remap(tp),quote(size))
     quote(sym) + "_temp"
   }

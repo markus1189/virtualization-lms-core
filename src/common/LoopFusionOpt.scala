@@ -219,18 +219,18 @@ trait LoopFusionCore extends internal.FatScheduling with CodeMotion with Simplif
 /*
   TODO: moved to GenericFatCodegen -- but they don't really belong there....
   
-  def unapplySimpleIndex(e: Def[Any]): Option[(Exp[Any], Exp[Int])] = None
-  def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = None
+  def unapplySimpleIndex(e: Def[Any]): Option[(Exp[Any], Exp[Long])] = None
+  def unapplySimpleDomain(e: Def[Long]): Option[Exp[Any]] = None
   def unapplySimpleCollect(e: Def[Any]): Option[Exp[Any]] = None
   def unapplySimpleCollectIf(e: Def[Any]): Option[(Exp[Any],List[Exp[Boolean]])] = None
 */
 
   object SimpleIndex {
-    def unapply(a: Def[Any]): Option[(Exp[Any], Exp[Int])] = unapplySimpleIndex(a)
+    def unapply(a: Def[Any]): Option[(Exp[Any], Exp[Long])] = unapplySimpleIndex(a)
   }
 
   object SimpleDomain {
-    def unapply(a: Def[Int]): Option[Exp[Any]] = unapplySimpleDomain(a)
+    def unapply(a: Def[Long]): Option[Exp[Any]] = unapplySimpleDomain(a)
   }
 
   object SimpleCollect {
@@ -289,8 +289,8 @@ trait LoopFusionCore extends internal.FatScheduling with CodeMotion with Simplif
       //do{
         
         // utils
-        def WgetLoopShape(e: Stm): Exp[Int] = e.rhs match { case SimpleFatLoop(s,x,rhs) => s }
-        def WgetLoopVar(e: Stm): List[Sym[Int]] = e.rhs match { case SimpleFatLoop(s,x,rhs) => List(x) }
+        def WgetLoopShape(e: Stm): Exp[Long] = e.rhs match { case SimpleFatLoop(s,x,rhs) => s }
+        def WgetLoopVar(e: Stm): List[Sym[Long]] = e.rhs match { case SimpleFatLoop(s,x,rhs) => List(x) }
         def WgetLoopRes(e: Stm): List[Def[Any]] = e.rhs match { case SimpleFatLoop(s,x,rhs) => rhs }
 
         val loopCollectSyms = Wloops flatMap (e => (e.lhs zip WgetLoopRes(e)) collect { case (s, SimpleCollectIf(_,_)) => s })
@@ -352,10 +352,10 @@ trait LoopFusionCore extends internal.FatScheduling with CodeMotion with Simplif
 
         // shape dependency helpers
 
-        def isShapeDep(s: Exp[Int], a: Stm) = s match { case Def(SimpleDomain(a1)) => a.lhs contains a1 case _ => false }
-        def getShapeCond(s: Exp[Int], a: Stm) = s match { case Def(SimpleDomain(a1)) => WgetLoopRes(a)(a.lhs indexOf a1) match { case SimpleCollectIf(a,c) => c } }
+        def isShapeDep(s: Exp[Long], a: Stm) = s match { case Def(SimpleDomain(a1)) => a.lhs contains a1 case _ => false }
+        def getShapeCond(s: Exp[Long], a: Stm) = s match { case Def(SimpleDomain(a1)) => WgetLoopRes(a)(a.lhs indexOf a1) match { case SimpleCollectIf(a,c) => c } }
 
-        def extendLoopWithCondition(e: Stm, shape: Exp[Int], targetVar: Sym[Int], c: List[Exp[Boolean]]): List[Exp[Any]] = e.rhs match { 
+        def extendLoopWithCondition(e: Stm, shape: Exp[Long], targetVar: Sym[Long], c: List[Exp[Boolean]]): List[Exp[Any]] = e.rhs match { 
           case SimpleFatLoop(s,x,rhs) => (e.lhs zip rhs).map { case (l,r) => findOrCreateDefinitionExp(SimpleLoop(shape,targetVar,applyAddCondition(r,c)), l.pos)(mtype(l.tp)) }
         }
 
@@ -539,8 +539,8 @@ trait LoopFusionCore extends internal.FatScheduling with CodeMotion with Simplif
       
       do {
         // utils
-        def WgetLoopShape(e: Stm): Exp[Int] = e.rhs match { case SimpleFatLoop(s,x,rhs) => s }
-        def WgetLoopVar(e: Stm): List[Sym[Int]] = e.rhs match { case SimpleFatLoop(s,x,rhs) => List(x) }
+        def WgetLoopShape(e: Stm): Exp[Long] = e.rhs match { case SimpleFatLoop(s,x,rhs) => s }
+        def WgetLoopVar(e: Stm): List[Sym[Long]] = e.rhs match { case SimpleFatLoop(s,x,rhs) => List(x) }
         def WgetLoopRes(e: Stm): List[Def[Any]] = e.rhs match { case SimpleFatLoop(s,x,rhs) => rhs }
 
         val loopCollectSyms = Wloops flatMap (e => (e.lhs zip WgetLoopRes(e)) collect { case (s, SimpleCollectIf(_,_)) => s })
@@ -615,10 +615,10 @@ trait LoopFusionCore extends internal.FatScheduling with CodeMotion with Simplif
         
         // shape dependency helpers
         
-        def isShapeDep(s: Exp[Int], a: Stm) = s match { case Def(SimpleDomain(a1)) => a.lhs contains a1 case _ => false }
-        def getShapeCond(s: Exp[Int], a: Stm) = s match { case Def(SimpleDomain(a1)) => WgetLoopRes(a)(a.lhs indexOf a1) match { case SimpleCollectIf(a,c) => c } }
+        def isShapeDep(s: Exp[Long], a: Stm) = s match { case Def(SimpleDomain(a1)) => a.lhs contains a1 case _ => false }
+        def getShapeCond(s: Exp[Long], a: Stm) = s match { case Def(SimpleDomain(a1)) => WgetLoopRes(a)(a.lhs indexOf a1) match { case SimpleCollectIf(a,c) => c } }
         
-        def extendLoopWithCondition(e: Stm, shape: Exp[Int], targetVar: Sym[Int], c: List[Exp[Boolean]]): List[Exp[Any]] = e.rhs match { 
+        def extendLoopWithCondition(e: Stm, shape: Exp[Long], targetVar: Sym[Long], c: List[Exp[Boolean]]): List[Exp[Any]] = e.rhs match { 
           case SimpleFatLoop(s,x,rhs) => (e.lhs zip rhs).map { case (l,r) => findOrCreateDefinitionExp(SimpleLoop(shape,targetVar,applyAddCondition(r,c)), l.pos) }
         }
         

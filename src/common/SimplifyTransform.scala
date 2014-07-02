@@ -159,12 +159,12 @@ trait SimplifyTransform extends internal.FatScheduling {
         
   /*      //update innerScope -- change definition of lhs2 in place (necessary?)
         innerScope = innerScope map {
-          case TP(l,_) if lhs2 contains l => TP(l, SimpleLoop(shape2,t(x).asInstanceOf[Sym[Int]],rhs2(lhs2.indexOf(l)))) 
+          case TP(l,_) if lhs2 contains l => TP(l, SimpleLoop(shape2,t(x).asInstanceOf[Sym[Long]],rhs2(lhs2.indexOf(l)))) 
           case d => d
         }*/
         
         printdbg("came up with: " + lhs2 + ", " + rhs2 + " with subst " + t.subst.mkString(","))
-        List(TTP(lhs2, mhs2, SimpleFatLoop(shape2,t(x).asInstanceOf[Sym[Int]],rhs2)))
+        List(TTP(lhs2, mhs2, SimpleFatLoop(shape2,t(x).asInstanceOf[Sym[Long]],rhs2)))
         // still problem: VectorSum(a,b) = SimpleLoop(i, ReduceElem(f(i))) 
         // might need to translate f(i), but looking up VectorSum will not be changed at all!!!
         // --> change rhs nonetheless???
@@ -173,7 +173,7 @@ trait SimplifyTransform extends internal.FatScheduling {
         // potential problem here: calling toAtom on a SimpleCollect (which does not have any symbol so far!)
         val lhs2 = (lhs zip rhs).map(p=>transformOne(p._1,p._2,t)).map { case s: Sym[Any] => s }.distinct.asInstanceOf[List[Sym[Any]]]
         val rhs2 = lhs2 map (findDefinition(_).get.rhs) //FIXME: will lookup old sym (ie VectorTrans) in case of AbstractCollect
-        List(TTP(lhs2, SimpleFatLoop(t(s),t(x).asInstanceOf[Sym[Int]],rhs2)))
+        List(TTP(lhs2, SimpleFatLoop(t(s),t(x).asInstanceOf[Sym[Long]],rhs2)))
   */      
     }
   }

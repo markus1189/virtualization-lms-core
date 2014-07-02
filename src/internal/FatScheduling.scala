@@ -14,8 +14,8 @@ trait FatScheduling extends Scheduling {
 
 
   //  ------------------- these are needed by loop fusion. they should live elsewhere.
-  def unapplySimpleIndex(e: Def[Any]): Option[(Exp[Any], Exp[Int])] = None
-  def unapplySimpleDomain(e: Def[Int]): Option[Exp[Any]] = None
+  def unapplySimpleIndex(e: Def[Any]): Option[(Exp[Any], Exp[Long])] = None
+  def unapplySimpleDomain(e: Def[Long]): Option[Exp[Any]] = None
   def unapplySimpleCollect(e: Def[Any]): Option[Exp[Any]] = None
   def unapplySimpleCollectIf(e: Def[Any]): Option[(Exp[Any],List[Exp[Boolean]])] = unapplySimpleCollect(e).map((_,Nil))
 
