@@ -33,6 +33,7 @@ trait LowPriorityVariableImplicits extends ImplicitOps {
 
   implicit def varIntToRepDouble(x: Var[Int])(implicit pos: SourceContext): Rep[Double] = implicit_convert[Int,Double](readVar(x))
   implicit def varIntToRepFloat(x: Var[Int])(implicit pos: SourceContext): Rep[Float] = implicit_convert[Int,Float](readVar(x))
+  implicit def varIntToRepLong(x: Var[Int])(implicit pos: SourceContext): Rep[Long] = implicit_convert[Int,Long](readVar(x))
   implicit def varFloatToRepDouble(x: Var[Float])(implicit pos: SourceContext): Rep[Double] = implicit_convert[Float,Double](readVar(x))
   implicit def varLongToRepDouble(x: Var[Long])(implicit pos: SourceContext): Rep[Double] = implicit_convert[Long,Double](readVar(x))
   implicit def varLongToRepFloat(x: Var[Long])(implicit pos: SourceContext): Rep[Float] = implicit_convert[Long,Float](readVar(x))
