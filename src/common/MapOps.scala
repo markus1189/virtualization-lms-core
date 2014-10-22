@@ -22,6 +22,7 @@ trait MapOps extends Variables {
     def filter(p: Rep[(A,B)] => Rep[Boolean])(implicit pos: SourceContext) = map_filter(m, p)
     def isEmpty(implicit pos: SourceContext) = map_is_empty(m)
     def values(implicit pos: SourceContext) = map_values(m)
+    def toSeq(implicit pos: SourceContext) = map_to_seq(m)
   }
 
   def map_new[A:Manifest,B:Manifest](kvs: Seq[Rep[(A,B)]])(implicit pos: SourceContext): Rep[Map[A,B]]
@@ -32,6 +33,7 @@ trait MapOps extends Variables {
   def map_filter[A:Manifest,B:Manifest](m: Rep[Map[A,B]], p: Rep[(A,B)] => Rep[Boolean])(implicit pos: SourceContext): Rep[Map[A,B]]
   def map_is_empty[A:Manifest,B:Manifest](m: Rep[Map[A,B]]): Rep[Boolean]
   def map_values[A:Manifest,B:Manifest](m: Rep[Map[A,B]]): Rep[Seq[B]]
+  def map_to_seq[A:Manifest,B:Manifest](m: Rep[Map[A,B]]): Rep[Seq[(A,B)]]
 }
 
 trait MapOpsExp extends MapOps with EffectExp {
@@ -43,6 +45,7 @@ trait MapOpsExp extends MapOps with EffectExp {
   case class MapFilter[A:Manifest,B:Manifest](m: Exp[Map[A,B]], x: Sym[(A,B)], block: Block[Boolean]) extends Def[Map[A,B]]
   case class MapIsEmpty[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) extends Def[Boolean]
   case class MapValues[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) extends Def[Seq[B]]
+  case class MapToSeq[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) extends Def[Seq[(A,B)]]
 
   def map_new[A:Manifest,B:Manifest](kvs: Seq[Exp[(A,B)]])(implicit pos: SourceContext) =
     MapNew(kvs)
@@ -72,6 +75,9 @@ trait MapOpsExp extends MapOps with EffectExp {
 
   def map_values[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) =
     MapValues(m)
+
+  def map_to_seq[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) =
+    MapToSeq(m)
 
   override def syms(e: Any): List[Sym[Any]] = e match {
     case MapNew(xs) => (xs flatMap { syms }).toList
@@ -110,6 +116,7 @@ trait ScalaGenMapOps extends BaseGenMapOps with ScalaGenEffect {
     case MapInsert(m, kv) => emitValDef(sym,src"$m + $kv")
     case MapIsEmpty(m) => emitValDef(sym,src"$m.isEmpty")
     case MapValues(m) => emitValDef(sym,src"$m.values.toSeq")
+    case MapToSeq(m) => emitValDef(sym,src"$m.toSeq")
     case MapMapValues(m,x,block) =>
       gen"""val $sym = $m.mapValues { $x =>
            |${nestedBlock(block)}
