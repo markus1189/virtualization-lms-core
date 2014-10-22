@@ -15,7 +15,7 @@ trait LiftString {
 trait StringOps extends Variables with OverloadHack {
   // NOTE: if something doesn't get lifted, this won't give you a compile time error,
   //       since string concat is defined on all objects
-  
+
   def infix_+(s1: String, s2: Rep[Any])(implicit o: Overloaded1, pos: SourceContext) = string_plus(unit(s1), s2)
   def infix_+[T:Manifest](s1: String, s2: Var[T])(implicit o: Overloaded2, pos: SourceContext) = string_plus(unit(s1), readVar(s2))
   def infix_+(s1: Rep[String], s2: Rep[Any])(implicit o: Overloaded1, pos: SourceContext) = string_plus(s1, s2)
@@ -25,23 +25,23 @@ trait StringOps extends Variables with OverloadHack {
   def infix_+(s1: Rep[Any], s2: Rep[String])(implicit o: Overloaded5, pos: SourceContext) = string_plus(s1, s2)
   def infix_+(s1: Rep[Any], s2: Var[String])(implicit o: Overloaded6, pos: SourceContext) = string_plus(s1, readVar(s2))
   def infix_+(s1: Rep[Any], s2: String)(implicit o: Overloaded7, pos: SourceContext) = string_plus(s1, unit(s2))
-  
-  def infix_+(s1: Var[String], s2: Rep[Any])(implicit o: Overloaded8, pos: SourceContext) = string_plus(readVar(s1), s2)  
+
+  def infix_+(s1: Var[String], s2: Rep[Any])(implicit o: Overloaded8, pos: SourceContext) = string_plus(readVar(s1), s2)
   def infix_+[T:Manifest](s1: Var[String], s2: Var[T])(implicit o: Overloaded9, pos: SourceContext) = string_plus(readVar(s1), readVar(s2))
-  def infix_+(s1: Var[String], s2: Rep[String])(implicit o: Overloaded10, pos: SourceContext) = string_plus(readVar(s1), s2)    
-  def infix_+(s1: Var[String], s2: Var[String])(implicit o: Overloaded11, pos: SourceContext) = string_plus(readVar(s1), readVar(s2))    
+  def infix_+(s1: Var[String], s2: Rep[String])(implicit o: Overloaded10, pos: SourceContext) = string_plus(readVar(s1), s2)
+  def infix_+(s1: Var[String], s2: Var[String])(implicit o: Overloaded11, pos: SourceContext) = string_plus(readVar(s1), readVar(s2))
   def infix_+[T:Manifest](s1: Var[T], s2: Rep[String])(implicit o: Overloaded12, pos: SourceContext) = string_plus(readVar(s1), s2)
   def infix_+[T:Manifest](s1: Var[T], s2: Var[String])(implicit o: Overloaded13, pos: SourceContext) = string_plus(readVar(s1), readVar(s2))
   def infix_+[T:Manifest](s1: Var[T], s2: String)(implicit o: Overloaded14, pos: SourceContext) = string_plus(readVar(s1), unit(s2))
-  
+
   // these are necessary to be more specific than arithmetic/numeric +. is there a more generic form of this that will work?
-  //def infix_+[R:Manifest](s1: Rep[String], s2: R)(implicit c: R => Rep[Any], o: Overloaded15, pos: SourceContext) = string_plus(s1, c(s2))  
+  //def infix_+[R:Manifest](s1: Rep[String], s2: R)(implicit c: R => Rep[Any], o: Overloaded15, pos: SourceContext) = string_plus(s1, c(s2))
   def infix_+(s1: Rep[String], s2: Double)(implicit o: Overloaded15, pos: SourceContext) = string_plus(s1, unit(s2))
   def infix_+(s1: Rep[String], s2: Float)(implicit o: Overloaded16, pos: SourceContext) = string_plus(s1, unit(s2))
   def infix_+(s1: Rep[String], s2: Int)(implicit o: Overloaded17, pos: SourceContext) = string_plus(s1, unit(s2))
   def infix_+(s1: Rep[String], s2: Long)(implicit o: Overloaded18, pos: SourceContext) = string_plus(s1, unit(s2))
-  def infix_+(s1: Rep[String], s2: Short)(implicit o: Overloaded19, pos: SourceContext) = string_plus(s1, unit(s2))  
-  
+  def infix_+(s1: Rep[String], s2: Short)(implicit o: Overloaded19, pos: SourceContext) = string_plus(s1, unit(s2))
+
   def infix_startsWith(s1: Rep[String], s2: Rep[String])(implicit pos: SourceContext) = string_startswith(s1,s2)
   def infix_trim(s: Rep[String])(implicit pos: SourceContext) = string_trim(s)
   def infix_split(s: Rep[String], separators: Rep[String])(implicit pos: SourceContext) = string_split(s, separators, unit(0))
@@ -53,6 +53,7 @@ trait StringOps extends Variables with OverloadHack {
   def infix_toFloat(s: Rep[String])(implicit pos: SourceContext) = string_tofloat(s)
   def infix_toInt(s: Rep[String])(implicit pos: SourceContext) = string_toint(s)
   def infix_toLong(s: Rep[String])(implicit pos: SourceContext) = string_tolong(s)
+  def infix_toLowerCase(s: Rep[String])(implicit pos: SourceContext) = string_tolowercase(s)
   def infix_substring(s: Rep[String], start: Rep[Int], end: Rep[Int])(implicit pos: SourceContext) = string_substring(s,start,end)
 
   // FIXME: enabling this causes trouble with DeliteOpSuite. investigate!!
@@ -74,6 +75,7 @@ trait StringOps extends Variables with OverloadHack {
   def string_tofloat(s: Rep[String])(implicit pos: SourceContext): Rep[Float]
   def string_toint(s: Rep[String])(implicit pos: SourceContext): Rep[Int]
   def string_tolong(s: Rep[String])(implicit pos: SourceContext): Rep[Long]
+  def string_tolowercase(s: Rep[String])(implicit pos: SourceContext): Rep[String]
   def string_substring(s: Rep[String], start:Rep[Int], end:Rep[Int])(implicit pos: SourceContext): Rep[String]
   def string_length(s: Rep[String])(implicit pos: SourceContext): Rep[Int]
 }
@@ -83,7 +85,7 @@ trait StringOpsExp extends StringOps with VariablesExp {
   case class StringStartsWith(s1: Exp[String], s2: Exp[String]) extends Def[Boolean]
   case class StringTrim(s: Exp[String]) extends Def[String]
   case class StringSplit(s: Exp[String], separators: Exp[String], limit: Exp[Int]) extends Def[Array[String]]
-  case class StringEndsWith(s: Exp[String], e: Exp[String]) extends Def[Boolean]  
+  case class StringEndsWith(s: Exp[String], e: Exp[String]) extends Def[Boolean]
   case class StringCharAt(s: Exp[String], i: Exp[Int]) extends Def[Char]
   case class StringValueOf(a: Exp[Any]) extends Def[String]
   case class StringToDouble(s: Exp[String]) extends Def[Double]
@@ -91,6 +93,7 @@ trait StringOpsExp extends StringOps with VariablesExp {
   case class StringToInt(s: Exp[String]) extends Def[Int]
   case class StringContains(s1: Exp[String], s2: Exp[String]) extends Def[Boolean]
   case class StringToLong(s: Exp[String]) extends Def[Long]
+  case class StringToLowerCase(s: Exp[String]) extends Def[String]
   case class StringSubstring(s: Exp[String], start:Exp[Int], end:Exp[Int]) extends Def[String]
   case class StringLength(s: Exp[String]) extends Def[Int]
 
@@ -106,6 +109,7 @@ trait StringOpsExp extends StringOps with VariablesExp {
   def string_tofloat(s: Rep[String])(implicit pos: SourceContext) = StringToFloat(s)
   def string_toint(s: Rep[String])(implicit pos: SourceContext) = StringToInt(s)
   def string_tolong(s: Rep[String])(implicit pos: SourceContext) = StringToLong(s)
+  def string_tolowercase(s: Rep[String])(implicit pos: SourceContext) = StringToLowerCase(s)
   def string_substring(s: Rep[String], start:Rep[Int], end:Rep[Int])(implicit pos: SourceContext) = StringSubstring(s,start,end)
   def string_length(s: Rep[String])(implicit pos: SourceContext) = StringLength(s)
 
@@ -130,19 +134,20 @@ trait StringOpsExp extends StringOps with VariablesExp {
 trait ScalaGenStringOps extends ScalaGenBase {
   val IR: StringOpsExp
   import IR._
-  
+
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StringPlus(s1,s2) => emitValDef(sym, src"$s1+$s2")
     case StringStartsWith(s1,s2) => emitValDef(sym, src"$s1.startsWith($s2)")
     case StringTrim(s) => emitValDef(sym, src"$s.trim()")
     case StringSplit(s, sep, l) => emitValDef(sym, src"$s.split($sep,$l)")
-    case StringEndsWith(s, e) => emitValDef(sym, "%s.endsWith(%s)".format(quote(s), quote(e)))    
+    case StringEndsWith(s, e) => emitValDef(sym, "%s.endsWith(%s)".format(quote(s), quote(e)))
     case StringCharAt(s,i) => emitValDef(sym, "%s.charAt(%s)".format(quote(s), quote(i)))
     case StringValueOf(a) => emitValDef(sym, src"java.lang.String.valueOf($a)")
     case StringToDouble(s) => emitValDef(sym, src"$s.toDouble")
     case StringToFloat(s) => emitValDef(sym, src"$s.toFloat")
     case StringToInt(s) => emitValDef(sym, src"$s.toInt")
     case StringToLong(s) => emitValDef(sym, src"$s.toLong")
+    case StringToLowerCase(s) => emitValDef(sym, src"$s.toLowerCase")
     case StringContains(s1,s2) => emitValDef(sym, "%s.contains(%s)".format(quote(s1),quote(s2)))
     case StringSubstring(s,a,b) => emitValDef(sym, src"$s.substring($a,$b)")
     case StringLength(s) => emitValDef(sym, src"$s.length")
@@ -169,9 +174,9 @@ trait CGenStringOps extends CGenBase {
     case StringStartsWith(s1,s2) => emitValDef(sym, "string_startsWith(%s,%s)".format(quote(s1),quote(s2)))
     case StringTrim(s) => emitValDef(sym, "string_trim(%s)".format(quote(s)))
     case StringSplit(s, sep, Const(0)) => emitValDef(sym, "string_split(%s,%s)".format(quote(s),quote(sep)))
-    //case StringEndsWith(s, e) => emitValDef(sym, "(strlen(%s)>=strlen(%s)) && strncmp(%s+strlen(%s)-strlen(%s),%s,strlen(%s))".format(quote(s),quote(e),quote(s),quote(e),quote(s),quote(e),quote(e)))    
+    //case StringEndsWith(s, e) => emitValDef(sym, "(strlen(%s)>=strlen(%s)) && strncmp(%s+strlen(%s)-strlen(%s),%s,strlen(%s))".format(quote(s),quote(e),quote(s),quote(e),quote(s),quote(e),quote(e)))
     case StringCharAt(s,i) => emitValDef(sym, "string_charAt(%s,%s)".format(quote(s), quote(i)))
-    //case StringValueOf(a) => 
+    //case StringValueOf(a) =>
     case StringToDouble(s) => emitValDef(sym, "string_toDouble(%s)".format(quote(s)))
     case StringToFloat(s) => emitValDef(sym, "string_toFloat(%s)".format(quote(s)))
     case StringToInt(s) => emitValDef(sym, "string_toInt(%s)".format(quote(s)))
