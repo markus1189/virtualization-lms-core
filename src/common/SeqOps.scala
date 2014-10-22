@@ -10,7 +10,7 @@ trait SeqOps extends Variables {
   object Seq {
     def apply[A:Manifest](xs: Rep[A]*)(implicit pos: SourceContext) = seq_new(xs)
   }
-  
+
   implicit def varToSeqOps[A:Manifest](x: Var[Seq[A]]) = new SeqOpsCls(readVar(x))
   implicit def repSeqToSeqOps[T:Manifest](a: Rep[Seq[T]]) = new SeqOpsCls(a)
   implicit def seqToSeqOps[T:Manifest](a: Seq[T]) = new SeqOpsCls(unit(a))
@@ -18,21 +18,29 @@ trait SeqOps extends Variables {
   class SeqOpsCls[T:Manifest](a: Rep[Seq[T]]){
     def apply(n: Rep[Int])(implicit pos: SourceContext) = seq_apply(a,n)
     def length(implicit pos: SourceContext) = seq_length(a)
+    def map[U:Manifest](f: Rep[T] => Rep[U]) = seq_map(a,f)
   }
 
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext): Rep[Seq[A]]
   def seq_apply[T:Manifest](x: Rep[Seq[T]], n: Rep[Int])(implicit pos: SourceContext): Rep[T]
   def seq_length[T:Manifest](x: Rep[Seq[T]])(implicit pos: SourceContext): Rep[Int]
+  def seq_map[A:Manifest,B:Manifest](xs: Rep[Seq[A]], f: Rep[A] => Rep[B])(implicit pos: SourceContext): Rep[Seq[B]]
 }
 
 trait SeqOpsExp extends SeqOps with EffectExp {
   case class SeqNew[A:Manifest](xs: List[Rep[A]]) extends Def[Seq[A]]
   case class SeqLength[T:Manifest](a: Exp[Seq[T]]) extends Def[Int]
   case class SeqApply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int]) extends Def[T]
-  
+  case class SeqMap[A:Manifest,B:Manifest](xs: Exp[Seq[A]], x: Sym[A], block: Block[B]) extends Def[Seq[B]]
+
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext) = SeqNew(xs.toList)
   def seq_apply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int])(implicit pos: SourceContext): Exp[T] = SeqApply(x, n)
   def seq_length[T:Manifest](a: Exp[Seq[T]])(implicit pos: SourceContext): Exp[Int] = SeqLength(a)
+  def seq_map[A:Manifest,B:Manifest](xs: Exp[Seq[A]], f: Exp[A] => Exp[B])(implicit pos: SourceContext) = {
+    val a = fresh[A]
+    val b = reifyEffects(f(a))
+    reflectEffect(SeqMap(xs, a, b), summarizeEffects(b).star)
+  }
 
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
     case SeqNew(xs) => seq_new(f(xs))
@@ -42,11 +50,18 @@ trait SeqOpsExp extends SeqOps with EffectExp {
   // TODO: need override? (missing data dependency in delite kernel without it...)
   override def syms(e: Any): List[Sym[Any]] = e match {
     case SeqNew(xs) => (xs flatMap { syms }).toList
+    case SeqMap(xs, x, body) => syms(xs):::syms(body)
     case _ => super.syms(e)
+  }
+
+  override def boundSyms(e: Any): List[Sym[Any]] = e match {
+    case SeqMap(xs, x, body) => x :: effectSyms(body)
+    case _ => super.boundSyms(e)
   }
 
   override def symsFreq(e: Any): List[(Sym[Any], Double)] = e match {
     case SeqNew(xs) => (xs flatMap { freqNormal }).toList
+    case SeqMap(xs, x, body) => freqNormal(xs):::freqHot(body)
     case _ => super.symsFreq(e)
   }
 }
@@ -65,6 +80,11 @@ trait ScalaGenSeqOps extends BaseGenSeqOps with ScalaGenEffect {
     case SeqNew(xs) => emitValDef(sym, src"Seq($xs)")
     case SeqLength(x) => emitValDef(sym, src"$x.length")
     case SeqApply(x,n) => emitValDef(sym, src"$x($n)")
+    case SeqMap(xs,x,blk) =>
+      gen"""val $sym = $xs.map { $x =>
+           |${nestedBlock(blk)}
+           |$blk
+           |}"""
     case _ => super.emitNode(sym, rhs)
   }
 }
