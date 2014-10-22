@@ -25,6 +25,10 @@ trait SeqOps extends Variables {
   def seq_apply[T:Manifest](x: Rep[Seq[T]], n: Rep[Int])(implicit pos: SourceContext): Rep[T]
   def seq_length[T:Manifest](x: Rep[Seq[T]])(implicit pos: SourceContext): Rep[Int]
   def seq_map[A:Manifest,B:Manifest](xs: Rep[Seq[A]], f: Rep[A] => Rep[B])(implicit pos: SourceContext): Rep[Seq[B]]
+
+  def infix_flatten[A:Manifest](xs: Rep[Seq[Seq[A]]])(implicit pos: SourceContext) = seq_flatten(xs)
+
+  def seq_flatten[A:Manifest](xs: Rep[Seq[Seq[A]]])(implicit pos: SourceContext): Rep[Seq[A]]
 }
 
 trait SeqOpsExp extends SeqOps with EffectExp {
@@ -32,6 +36,7 @@ trait SeqOpsExp extends SeqOps with EffectExp {
   case class SeqLength[T:Manifest](a: Exp[Seq[T]]) extends Def[Int]
   case class SeqApply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int]) extends Def[T]
   case class SeqMap[A:Manifest,B:Manifest](xs: Exp[Seq[A]], x: Sym[A], block: Block[B]) extends Def[Seq[B]]
+  case class SeqFlatten[A:Manifest](xs: Exp[Seq[Seq[A]]]) extends Def[Seq[A]]
 
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext) = SeqNew(xs.toList)
   def seq_apply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int])(implicit pos: SourceContext): Exp[T] = SeqApply(x, n)
@@ -42,8 +47,11 @@ trait SeqOpsExp extends SeqOps with EffectExp {
     reflectEffect(SeqMap(xs, a, b), summarizeEffects(b).star)
   }
 
+  def seq_flatten[A:Manifest](xs: Exp[Seq[Seq[A]]])(implicit pos: SourceContext): Exp[Seq[A]] = SeqFlatten(xs)
+
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
     case SeqNew(xs) => seq_new(f(xs))
+    case SeqFlatten(xs) => seq_flatten(f(xs))
     case _ => super.mirror(e,f)
   }).asInstanceOf[Exp[A]]
 
@@ -80,6 +88,7 @@ trait ScalaGenSeqOps extends BaseGenSeqOps with ScalaGenEffect {
     case SeqNew(xs) => emitValDef(sym, src"Seq($xs)")
     case SeqLength(x) => emitValDef(sym, src"$x.length")
     case SeqApply(x,n) => emitValDef(sym, src"$x($n)")
+    case SeqFlatten(xs) => emitValDef(sym, src"$xs.flatten")
     case SeqMap(xs,x,blk) =>
       gen"""val $sym = $xs.map { $x =>
            |${nestedBlock(blk)}
