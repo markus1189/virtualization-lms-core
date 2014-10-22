@@ -19,12 +19,14 @@ trait SeqOps extends Variables {
     def apply(n: Rep[Int])(implicit pos: SourceContext) = seq_apply(a,n)
     def length(implicit pos: SourceContext) = seq_length(a)
     def map[U:Manifest](f: Rep[T] => Rep[U]) = seq_map(a,f)
+    def foldLeft[U:Manifest](z: Rep[U])(f: Rep[(U,T)] => Rep[U]) = seq_foldl(a,z,f)
   }
 
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext): Rep[Seq[A]]
   def seq_apply[T:Manifest](x: Rep[Seq[T]], n: Rep[Int])(implicit pos: SourceContext): Rep[T]
   def seq_length[T:Manifest](x: Rep[Seq[T]])(implicit pos: SourceContext): Rep[Int]
   def seq_map[A:Manifest,B:Manifest](xs: Rep[Seq[A]], f: Rep[A] => Rep[B])(implicit pos: SourceContext): Rep[Seq[B]]
+  def seq_foldl[A:Manifest,B:Manifest](xs: Rep[Seq[A]], z: Rep[B], f: Rep[(B,A)] => Rep[B])(implicit pos: SourceContext): Rep[B]
 
   def infix_flatten[A:Manifest](xs: Rep[Seq[Seq[A]]])(implicit pos: SourceContext) = seq_flatten(xs)
 
@@ -36,6 +38,7 @@ trait SeqOpsExp extends SeqOps with EffectExp {
   case class SeqLength[T:Manifest](a: Exp[Seq[T]]) extends Def[Int]
   case class SeqApply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int]) extends Def[T]
   case class SeqMap[A:Manifest,B:Manifest](xs: Exp[Seq[A]], x: Sym[A], block: Block[B]) extends Def[Seq[B]]
+  case class SeqFoldl[A:Manifest,B:Manifest](xs: Exp[Seq[A]], zero: Exp[B], x: Sym[(B,A)], block: Block[B]) extends Def[B]
   case class SeqFlatten[A:Manifest](xs: Exp[Seq[Seq[A]]]) extends Def[Seq[A]]
 
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext) = SeqNew(xs.toList)
@@ -45,6 +48,11 @@ trait SeqOpsExp extends SeqOps with EffectExp {
     val a = fresh[A]
     val b = reifyEffects(f(a))
     reflectEffect(SeqMap(xs, a, b), summarizeEffects(b).star)
+  }
+  def seq_foldl[A:Manifest,B:Manifest](xs: Exp[Seq[A]], z: Exp[B], f: Exp[(B,A)] => Exp[B])(implicit pos: SourceContext) = {
+    val a = fresh[(B,A)]
+    val b = reifyEffects(f(a))
+    reflectEffect(SeqFoldl(xs,z,a,b), summarizeEffects(b).star)
   }
 
   def seq_flatten[A:Manifest](xs: Exp[Seq[Seq[A]]])(implicit pos: SourceContext): Exp[Seq[A]] = SeqFlatten(xs)
@@ -59,17 +67,20 @@ trait SeqOpsExp extends SeqOps with EffectExp {
   override def syms(e: Any): List[Sym[Any]] = e match {
     case SeqNew(xs) => (xs flatMap { syms }).toList
     case SeqMap(xs, x, body) => syms(xs):::syms(body)
+    case SeqFoldl(xs, z, x, body) => syms(xs):::syms(body)
     case _ => super.syms(e)
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
     case SeqMap(xs, x, body) => x :: effectSyms(body)
+    case SeqFoldl(xs, z, x, body) => x :: effectSyms(body)
     case _ => super.boundSyms(e)
   }
 
   override def symsFreq(e: Any): List[(Sym[Any], Double)] = e match {
     case SeqNew(xs) => (xs flatMap { freqNormal }).toList
     case SeqMap(xs, x, body) => freqNormal(xs):::freqHot(body)
+    case SeqFoldl(xs, z, x, body) => freqNormal(xs):::freqHot(body)
     case _ => super.symsFreq(e)
   }
 }
@@ -94,6 +105,11 @@ trait ScalaGenSeqOps extends BaseGenSeqOps with ScalaGenEffect {
            |${nestedBlock(blk)}
            |$blk
            |}"""
+    case SeqFoldl(xs,z,x,blk) =>
+      gen"""val $sym = $xs.foldLeft($z) { $x =>
+           |${nestedBlock(blk)}
+           |$blk
+           } """
     case _ => super.emitNode(sym, rhs)
   }
 }
