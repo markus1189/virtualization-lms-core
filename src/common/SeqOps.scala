@@ -5,7 +5,7 @@ import java.io.PrintWriter
 import internal._
 import scala.reflect.SourceContext
 
-trait SeqOps extends Variables {
+trait SeqOps extends Variables with BooleanOps {
 
   object Seq {
     def apply[A:Manifest](xs: Rep[A]*)(implicit pos: SourceContext) = seq_new(xs)
@@ -21,6 +21,8 @@ trait SeqOps extends Variables {
     def map[U:Manifest](f: Rep[T] => Rep[U]) = seq_map(a,f)
     def foldLeft[U:Manifest](z: Rep[U])(f: Rep[(U,T)] => Rep[U]) = seq_foldl(a,z,f)
     def max(implicit cmp: Ordering[T]) = seq_max(a)
+    def filter(p: Rep[T] => Rep[Boolean]) = seq_filter(a, p)
+    def filterNot(p: Rep[T] => Rep[Boolean]) = seq_filter(a, ((y: Rep[T]) => !p(y)))
   }
 
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext): Rep[Seq[A]]
@@ -33,9 +35,10 @@ trait SeqOps extends Variables {
 
   def seq_flatten[A:Manifest](xs: Rep[Seq[Seq[A]]])(implicit pos: SourceContext): Rep[Seq[A]]
   def seq_max[A:Manifest:Ordering](xs: Rep[Seq[A]])(implicit pos: SourceContext): Rep[A]
+  def seq_filter[A:Manifest](xs: Rep[Seq[A]], p: Rep[A] => Rep[Boolean])(implicit pos: SourceContext): Rep[Seq[A]]
 }
 
-trait SeqOpsExp extends SeqOps with EffectExp {
+trait SeqOpsExp extends SeqOps with EffectExp with BooleanOpsExp {
   case class SeqNew[A:Manifest](xs: List[Rep[A]]) extends Def[Seq[A]]
   case class SeqLength[T:Manifest](a: Exp[Seq[T]]) extends Def[Int]
   case class SeqApply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int]) extends Def[T]
@@ -43,6 +46,7 @@ trait SeqOpsExp extends SeqOps with EffectExp {
   case class SeqFoldl[A:Manifest,B:Manifest](xs: Exp[Seq[A]], zero: Exp[B], x: Sym[(B,A)], block: Block[B]) extends Def[B]
   case class SeqFlatten[A:Manifest](xs: Exp[Seq[Seq[A]]]) extends Def[Seq[A]]
   case class SeqMax[A:Manifest](xs: Exp[Seq[A]], cmp: Ordering[A]) extends Def[A]
+  case class SeqFilter[A:Manifest](xs: Exp[Seq[A]], x: Sym[A], block: Block[Boolean]) extends Def[Seq[A]]
 
   def seq_new[A:Manifest](xs: Seq[Rep[A]])(implicit pos: SourceContext) = SeqNew(xs.toList)
   def seq_apply[T:Manifest](x: Exp[Seq[T]], n: Exp[Int])(implicit pos: SourceContext): Exp[T] = SeqApply(x, n)
@@ -63,6 +67,12 @@ trait SeqOpsExp extends SeqOps with EffectExp {
   def seq_max[A:Manifest:Ordering](xs: Exp[Seq[A]])(implicit pos: SourceContext) =
     SeqMax(xs, implicitly[Ordering[A]])
 
+  def seq_filter[A:Manifest](xs: Exp[Seq[A]], p: Exp[A] => Exp[Boolean])(implicit pos: SourceContext) = {
+    val a = fresh[A]
+    val b = reifyEffects(p(a))
+    reflectEffect(SeqFilter(xs,a,b), summarizeEffects(b).star)
+  }
+
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
     case SeqNew(xs) => seq_new(f(xs))
     case SeqFlatten(xs) => seq_flatten(f(xs))
@@ -74,12 +84,14 @@ trait SeqOpsExp extends SeqOps with EffectExp {
     case SeqNew(xs) => (xs flatMap { syms }).toList
     case SeqMap(xs, x, body) => syms(xs):::syms(body)
     case SeqFoldl(xs, z, x, body) => syms(xs):::syms(body)
+    case SeqFilter(xs, _, body) => syms(xs) ::: syms(body)
     case _ => super.syms(e)
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
     case SeqMap(xs, x, body) => x :: effectSyms(body)
     case SeqFoldl(xs, z, x, body) => x :: effectSyms(body)
+    case SeqFilter(_, x, body) => x :: effectSyms(body)
     case _ => super.boundSyms(e)
   }
 
@@ -87,6 +99,7 @@ trait SeqOpsExp extends SeqOps with EffectExp {
     case SeqNew(xs) => (xs flatMap { freqNormal }).toList
     case SeqMap(xs, x, body) => freqNormal(xs):::freqHot(body)
     case SeqFoldl(xs, z, x, body) => freqNormal(xs):::freqHot(body)
+    case SeqFilter(xs, _, body) => freqNormal(xs) ::: freqHot(body)
     case _ => super.symsFreq(e)
   }
 }
@@ -97,7 +110,7 @@ trait BaseGenSeqOps extends GenericNestedCodegen {
 
 }
 
-trait ScalaGenSeqOps extends BaseGenSeqOps with ScalaGenEffect {
+trait ScalaGenSeqOps extends BaseGenSeqOps with ScalaGenEffect with ScalaGenBooleanOps {
   val IR: SeqOpsExp
   import IR._
 
@@ -117,6 +130,12 @@ trait ScalaGenSeqOps extends BaseGenSeqOps with ScalaGenEffect {
            |${nestedBlock(blk)}
            |$blk
            } """
+    case SeqFilter(xs, x, b) =>
+      gen"""val $sym = $xs.filter { $x =>
+           |${nestedBlock(b)}
+           |$b
+           |}"""
+
     case _ => super.emitNode(sym, rhs)
   }
 }
