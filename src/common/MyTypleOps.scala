@@ -9,28 +9,41 @@ import scala.reflect.SourceContext
 trait MyTupleOps extends Base {
 
   object P2 {
-    def apply[A:Manifest,B:Manifest](fst: Rep[A], snd: Rep[B]) = my_make_tuple2((fst,snd))
+    def apply[A:Manifest,B:Manifest](fst: Rep[A], snd: Rep[B]) = my_make_tuple2(fst,snd)
+  }
+
+  implicit def toP2Cls[A:Manifest,B:Manifest](t: Rep[(A,B)]) = P2Cls(t)
+  case class P2Cls[A:Manifest,B:Manifest](t: Rep[(A,B)]) {
+    def _1: Rep[A] = my_tuple2_get1(t)
+    def _2: Rep[B] = my_tuple2_get2(t)
   }
 
   object P3 {
-    def apply[A:Manifest,B:Manifest,C:Manifest](fst: Rep[A], snd: Rep[B], trd: Rep[C]) = my_make_tuple3((fst,snd,trd))
+    def apply[A:Manifest,B:Manifest,C:Manifest](fst: Rep[A], snd: Rep[B], trd: Rep[C]) = my_make_tuple3(fst,snd,trd)
+  }
+
+  implicit def toP3Cls[A:Manifest,B:Manifest,C:Manifest](t: Rep[(A,B,C)]) = P3Cls(t)
+  case class P3Cls[A:Manifest,B:Manifest,C:Manifest](t: Rep[(A,B,C)]) {
+    def _1: Rep[A] = my_tuple3_get1(t)
+    def _2: Rep[B] = my_tuple3_get2(t)
+    def _3: Rep[C] = my_tuple3_get3(t)
   }
 
   object P4 {
     def apply[A:Manifest,B:Manifest,C:Manifest,D:Manifest](
-      fst: Rep[A], snd: Rep[B], trd: Rep[C], fth: Rep[D]) = my_make_tuple4((fst,snd,trd,fth))
+      fst: Rep[A], snd: Rep[B], trd: Rep[C], fth: Rep[D]) = my_make_tuple4(fst,snd,trd,fth)
   }
 
   object P5 {
     def apply[A:Manifest,B:Manifest,C:Manifest,D:Manifest,E:Manifest](
       fst: Rep[A], snd: Rep[B], trd: Rep[C], fth: Rep[D], fif: Rep[E]) =
-      my_make_tuple5((fst,snd,trd,fth,fif))
+      my_make_tuple5(fst,snd,trd,fth,fif)
   }
 
-  implicit def my_make_tuple2[A:Manifest,B:Manifest](t: (Rep[A], Rep[B]))(implicit pos: SourceContext) : Rep[(A,B)]
-  implicit def my_make_tuple3[A:Manifest,B:Manifest,C:Manifest](t: (Rep[A], Rep[B], Rep[C]))(implicit pos: SourceContext) : Rep[(A,B,C)]
-  implicit def my_make_tuple4[A:Manifest,B:Manifest,C:Manifest,D:Manifest](t: (Rep[A], Rep[B], Rep[C], Rep[D]))(implicit pos: SourceContext) : Rep[(A,B,C,D)]
-  implicit def my_make_tuple5[A:Manifest,B:Manifest,C:Manifest,D:Manifest,E:Manifest](t: (Rep[A], Rep[B], Rep[C], Rep[D], Rep[E]))(implicit pos: SourceContext) : Rep[(A,B,C,D,E)]
+  def my_make_tuple2[A:Manifest,B:Manifest](a: Rep[A], b: Rep[B])(implicit pos: SourceContext) : Rep[(A,B)]
+  def my_make_tuple3[A:Manifest,B:Manifest,C:Manifest](a: Rep[A], b: Rep[B], c: Rep[C])(implicit pos: SourceContext) : Rep[(A,B,C)]
+  def my_make_tuple4[A:Manifest,B:Manifest,C:Manifest,D:Manifest](a: Rep[A], b: Rep[B], c: Rep[C], d: Rep[D])(implicit pos: SourceContext) : Rep[(A,B,C,D)]
+  def my_make_tuple5[A:Manifest,B:Manifest,C:Manifest,D:Manifest,E:Manifest](a: Rep[A], b: Rep[B], c: Rep[C], d: Rep[D], e: Rep[E])(implicit pos: SourceContext) : Rep[(A,B,C,D,E)]
 
   def my_tuple2_get1[A:Manifest](t: Rep[(A,_)])(implicit pos: SourceContext) : Rep[A]
   def my_tuple2_get2[B:Manifest](t: Rep[(_,B)])(implicit pos: SourceContext) : Rep[B]
@@ -76,10 +89,10 @@ trait MyTupleOpsExp extends MyTupleOps with Expressions {
   case class P5Get4[D:Manifest](p: Exp[(_,_,_,D,_)]) extends Def[D]
   case class P5Get5[E:Manifest](p: Exp[(_,_,_,_,E)]) extends Def[E]
 
-  implicit def my_make_tuple2[A:Manifest,B:Manifest](t: (Exp[A],Exp[B]))(implicit pos: SourceContext) : Exp[(A,B)] = CP2(t._1,t._2)
-  implicit def my_make_tuple3[A:Manifest,B:Manifest,C:Manifest](t: (Exp[A],Exp[B],Exp[C]))(implicit pos: SourceContext) : Exp[(A,B,C)] = CP3(t._1,t._2,t._3)
-  implicit def my_make_tuple4[A:Manifest,B:Manifest,C:Manifest,D:Manifest](t: (Exp[A],Exp[B],Exp[C],Exp[D]))(implicit pos: SourceContext) : Exp[(A,B,C,D)] = CP4(t._1,t._2,t._3,t._4)
-  implicit def my_make_tuple5[A:Manifest,B:Manifest,C:Manifest,D:Manifest,E:Manifest](t: (Exp[A],Exp[B],Exp[C],Exp[D],Exp[E]))(implicit pos: SourceContext) : Exp[(A,B,C,D,E)] = CP5(t._1,t._2,t._3,t._4, t._5)
+  def my_make_tuple2[A:Manifest,B:Manifest](a: Exp[A], b: Exp[B])(implicit pos: SourceContext) : Exp[(A,B)] = CP2(a,b)
+  def my_make_tuple3[A:Manifest,B:Manifest,C:Manifest](a: Exp[A], b: Exp[B], c: Exp[C])(implicit pos: SourceContext) : Exp[(A,B,C)] = CP3(a,b,c)
+  def my_make_tuple4[A:Manifest,B:Manifest,C:Manifest,D:Manifest](a: Exp[A], b: Exp[B], c: Exp[C], d: Exp[D])(implicit pos: SourceContext) : Exp[(A,B,C,D)] = CP4(a,b,c,d)
+  def my_make_tuple5[A:Manifest,B:Manifest,C:Manifest,D:Manifest,E:Manifest](a: Exp[A], b: Exp[B], c: Exp[C], d: Exp[D], e: Exp[E])(implicit pos: SourceContext) : Exp[(A,B,C,D,E)] = CP5(a,b,c,d,e)
 
   def my_tuple2_get1[A:Manifest](p: Exp[(A,_)])(implicit pos: SourceContext) = P2Get1(p)
   def my_tuple2_get2[B:Manifest](p: Exp[(_,B)])(implicit pos: SourceContext) = P2Get2(p)
@@ -106,7 +119,7 @@ trait ScalaGenMyTupleOps extends GenericCodegen {
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
 
-    case CP2(fst, snd) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + ")")
+   case CP2(fst, snd) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + ")")
     case CP3(fst, snd, trd) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + "," + quote(trd) + ")")
     case CP4(fst, snd, trd, fth) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + "," + quote(trd) + "," + quote(fth) + ")")
     case CP5(fst, snd, trd, fth, fif) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + "," + quote(trd) + "," + quote(fth) + "," + quote(fif) + ")")
