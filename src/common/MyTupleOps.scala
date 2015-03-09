@@ -1,10 +1,10 @@
 package scala.virtualization.lms
 package common
 
-import scala.virtualization.lms.internal.GenericCodegen
-import scala.virtualization.lms.internal.Expressions
 import java.io.PrintWriter
+import scala.language.implicitConversions
 import scala.reflect.SourceContext
+import scala.virtualization.lms.internal.Expressions
 
 trait MyTupleOps extends Base {
 
@@ -64,7 +64,7 @@ trait MyTupleOps extends Base {
   def my_tuple5_get5[E:Manifest](t: Rep[(_,_,_,_,E)])(implicit pos: SourceContext) : Rep[E]
 }
 
-trait MyTupleOpsExp extends MyTupleOps with Expressions {
+trait MyTupleOpsExp extends MyTupleOps with BaseExp {
 
   case class CP2[A:Manifest,B:Manifest](fst: Exp[A], snd: Exp[B]) extends Def[(A,B)]
   case class CP3[A:Manifest,B:Manifest,C:Manifest](fst: Exp[A], snd: Exp[B], trd: Exp[C]) extends Def[(A,B,C)]
@@ -113,13 +113,13 @@ trait MyTupleOpsExp extends MyTupleOps with Expressions {
   def my_tuple5_get5[E:Manifest](p: Exp[(_,_,_,_,E)])(implicit pos: SourceContext) = P5Get5(p)
 }
 
-trait ScalaGenMyTupleOps extends GenericCodegen {
+trait ScalaGenMyTupleOps extends ScalaGenBase {
   val IR: MyTupleOpsExp
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
 
-   case CP2(fst, snd) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + ")")
+    case CP2(fst, snd) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + ")")
     case CP3(fst, snd, trd) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + "," + quote(trd) + ")")
     case CP4(fst, snd, trd, fth) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + "," + quote(trd) + "," + quote(fth) + ")")
     case CP5(fst, snd, trd, fth, fif) => emitValDef(sym, "(" + quote(fst) + "," + quote(snd) + "," + quote(trd) + "," + quote(fth) + "," + quote(fif) + ")")
