@@ -19,6 +19,7 @@ trait MapOps extends Variables {
     def withDefaultValue(z: Rep[B])(implicit pos: SourceContext) = map_with_default(m,z)
     def mapValues[C:Manifest](f: Rep[B] => Rep[C]) = map_map_values(m,f)
     def insert(kv: Rep[(A,B)])(implicit pos: SourceContext) = map_insert(m,kv)
+    def insertCurry(k: Rep[A], v: Rep[B])(implicit pos: SourceContext) = map_insert_curry(m,k,v)
     def filter(p: Rep[(A,B)] => Rep[Boolean])(implicit pos: SourceContext) = map_filter(m, p)
     def isEmpty(implicit pos: SourceContext) = map_is_empty(m)
     def values(implicit pos: SourceContext) = map_values(m)
@@ -30,6 +31,7 @@ trait MapOps extends Variables {
   def map_with_default[A:Manifest,B:Manifest](m: Rep[Map[A,B]], z: Rep[B])(implicit pos: SourceContext): Rep[Map[A,B]]
   def map_map_values[A:Manifest,B:Manifest,C:Manifest](m: Rep[Map[A,B]], f: Rep[B] => Rep[C])(implicit pos: SourceContext): Rep[Map[A,C]]
   def map_insert[A:Manifest,B:Manifest](m: Rep[Map[A,B]], kv: Rep[(A,B)])(implicit pos: SourceContext): Rep[Map[A,B]]
+  def map_insert_curry[A:Manifest,B:Manifest](m: Rep[Map[A,B]], k: Rep[A], v: Rep[B])(implicit pos: SourceContext): Rep[Map[A,B]]
   def map_filter[A:Manifest,B:Manifest](m: Rep[Map[A,B]], p: Rep[(A,B)] => Rep[Boolean])(implicit pos: SourceContext): Rep[Map[A,B]]
   def map_is_empty[A:Manifest,B:Manifest](m: Rep[Map[A,B]]): Rep[Boolean]
   def map_values[A:Manifest,B:Manifest](m: Rep[Map[A,B]]): Rep[Seq[B]]
@@ -46,6 +48,10 @@ trait MapOpsExp extends MapOps with EffectExp {
     [Map[A,B]], z: Exp[B]) extends Def[Map[A,B]]
   case class MapMapValues[A:Manifest,B:Manifest,C:Manifest](m: Exp[Map[A,B]], x: Sym[B], block: Block[C]) extends Def[Map[A,C]]
   case class MapInsert[A:Manifest,B:Manifest](m: Exp[Map[A,B]], kv: Exp[(A,B)]) extends Def[Map[A,B]]
+  case class MapInsertCurry[A:Manifest,B:Manifest](m: Exp[Map[A,B]], k: Exp[A], v: Exp[B]) extends Def[Map[A,B]] {
+    val mA = manifest[A]
+    val mB = manifest[B]
+  }
   case class MapFilter[A:Manifest,B:Manifest](m: Exp[Map[A,B]], x: Sym[(A,B)], block: Block[Boolean]) extends Def[Map[A,B]]
   case class MapIsEmpty[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) extends Def[Boolean]
   case class MapValues[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) extends Def[Seq[B]]
@@ -73,6 +79,7 @@ trait MapOpsExp extends MapOps with EffectExp {
   }
 
   def map_insert[A:Manifest,B:Manifest](m: Exp[Map[A,B]], kv: Exp[(A,B)])(implicit pos: SourceContext) = MapInsert(m,kv)
+  def map_insert_curry[A:Manifest,B:Manifest](m: Exp[Map[A,B]], k: Exp[A], v: Exp[B])(implicit pos: SourceContext) = MapInsertCurry(m,k,v)
 
   def map_is_empty[A:Manifest,B:Manifest](m: Exp[Map[A,B]]) =
     MapIsEmpty(m)
@@ -121,6 +128,7 @@ trait ScalaGenMapOps extends BaseGenMapOps with ScalaGenEffect {
     case MapApply(m, key) => emitValDef(sym,src"$m($key)")
     case MapWithDefault(m, z) => emitValDef(sym,src"$m.withDefaultValue($z)")
     case MapInsert(m, kv) => emitValDef(sym,src"$m + $kv")
+    case mi@MapInsertCurry(m, k, v) => gen"""val $sym = $m + ($k -> $v) /*insertCurry ${mi.mA} ${mi.mB}*/"""
     case MapIsEmpty(m) => emitValDef(sym,src"$m.isEmpty")
     case MapValues(m) => emitValDef(sym,src"$m.values.toSeq")
     case MapToSeq(m) => emitValDef(sym,src"$m.toSeq")
