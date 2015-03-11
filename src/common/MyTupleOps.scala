@@ -5,8 +5,9 @@ import java.io.PrintWriter
 import scala.language.implicitConversions
 import scala.reflect.SourceContext
 import scala.virtualization.lms.internal.Expressions
+import scala.virtualization.lms.internal.GenericNestedCodegen
 
-trait MyTupleOps extends Base {
+trait MyTupleOps extends Variables {
 
   object P2 {
     def apply[A:Manifest,B:Manifest](fst: Rep[A], snd: Rep[B]) = my_make_tuple2(fst,snd)
@@ -64,7 +65,7 @@ trait MyTupleOps extends Base {
   def my_tuple5_get5[E:Manifest](t: Rep[(_,_,_,_,E)])(implicit pos: SourceContext) : Rep[E]
 }
 
-trait MyTupleOpsExp extends MyTupleOps with BaseExp {
+trait MyTupleOpsExp extends MyTupleOps with VariablesExp {
 
   case class CP2[A:Manifest,B:Manifest](fst: Exp[A], snd: Exp[B]) extends Def[(A,B)]
   case class CP3[A:Manifest,B:Manifest,C:Manifest](fst: Exp[A], snd: Exp[B], trd: Exp[C]) extends Def[(A,B,C)]
@@ -113,7 +114,7 @@ trait MyTupleOpsExp extends MyTupleOps with BaseExp {
   def my_tuple5_get5[E:Manifest](p: Exp[(_,_,_,_,E)])(implicit pos: SourceContext) = P5Get5(p)
 }
 
-trait ScalaGenMyTupleOps extends ScalaGenBase {
+trait ScalaGenMyTupleOps extends GenericNestedCodegen with ScalaGenEffect {
   val IR: MyTupleOpsExp
   import IR._
 
