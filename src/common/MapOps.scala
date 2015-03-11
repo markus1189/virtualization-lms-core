@@ -37,7 +37,10 @@ trait MapOps extends Variables {
 }
 
 trait MapOpsExp extends MapOps with EffectExp {
-  case class MapNew[A:Manifest,B:Manifest](xs: Seq[Exp[(A,B)]]) extends Def[Map[A,B]]
+  case class MapNew[A:Manifest,B:Manifest](xs: Seq[Exp[(A,B)]]) extends Def[Map[A,B]] {
+    val mA = manifest[A]
+    val mB = manifest[B]
+  }
   case class MapApply[A:Manifest,B:Manifest](m: Exp[Map[A,B]], key: Exp[A]) extends Def[B]
   case class MapWithDefault[A:Manifest,B:Manifest](m: Exp
     [Map[A,B]], z: Exp[B]) extends Def[Map[A,B]]
@@ -114,7 +117,7 @@ trait ScalaGenMapOps extends BaseGenMapOps with ScalaGenEffect {
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case MapNew(xs) => emitValDef(sym,src"Map($xs)")
+    case m@MapNew(xs) => emitValDef(sym,src"Map[${m.mA},${m.mB}]($xs)")
     case MapApply(m, key) => emitValDef(sym,src"$m($key)")
     case MapWithDefault(m, z) => emitValDef(sym,src"$m.withDefaultValue($z)")
     case MapInsert(m, kv) => emitValDef(sym,src"$m + $kv")
