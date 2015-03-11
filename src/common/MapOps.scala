@@ -39,7 +39,8 @@ trait MapOps extends Variables {
 trait MapOpsExp extends MapOps with EffectExp {
   case class MapNew[A:Manifest,B:Manifest](xs: Seq[Exp[(A,B)]]) extends Def[Map[A,B]]
   case class MapApply[A:Manifest,B:Manifest](m: Exp[Map[A,B]], key: Exp[A]) extends Def[B]
-  case class MapWithDefault[A:Manifest,B:Manifest](m: Exp[Map[A,B]], z: Exp[B]) extends Def[Map[A,B]]
+  case class MapWithDefault[A:Manifest,B:Manifest](m: Exp
+    [Map[A,B]], z: Exp[B]) extends Def[Map[A,B]]
   case class MapMapValues[A:Manifest,B:Manifest,C:Manifest](m: Exp[Map[A,B]], x: Sym[B], block: Block[C]) extends Def[Map[A,C]]
   case class MapInsert[A:Manifest,B:Manifest](m: Exp[Map[A,B]], kv: Exp[(A,B)]) extends Def[Map[A,B]]
   case class MapFilter[A:Manifest,B:Manifest](m: Exp[Map[A,B]], x: Sym[(A,B)], block: Block[Boolean]) extends Def[Map[A,B]]
@@ -54,7 +55,7 @@ trait MapOpsExp extends MapOps with EffectExp {
     MapApply(m,key)
 
   def map_with_default[A:Manifest,B:Manifest](m: Exp[Map[A,B]], z: Exp[B])(implicit pos: SourceContext) =
-    MapWithDefault(m,z)
+    reflectMutable(MapWithDefault(m,z))
 
   def map_map_values[A:Manifest,B:Manifest,C:Manifest](m: Exp[Map[A,B]], f: Exp[B] => Exp[C])(implicit pos: SourceContext) = {
     val x = fresh[B]
@@ -83,12 +84,14 @@ trait MapOpsExp extends MapOps with EffectExp {
     case MapNew(xs) => (xs flatMap { syms }).toList
     case MapMapValues(xs, x, body) => syms(xs):::syms(body)
     case MapFilter(a, _, body) => syms(a) ::: syms(body)
+    case MapWithDefault(m,z) => syms(z) ::: syms(m)
     case _ => super.syms(e)
   }
 
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
     case MapMapValues(xs, x, body) => x :: effectSyms(body)
     case MapFilter(_, x, body) => x :: effectSyms(body)
+    case MapWithDefault(m,z) =>  syms(z) ::: effectSyms(m)
     case _ => super.boundSyms(e)
   }
 
@@ -96,6 +99,7 @@ trait MapOpsExp extends MapOps with EffectExp {
     case MapNew(xs) => (xs flatMap { freqNormal }).toList
     case MapMapValues(xs, x, body) => freqNormal(xs):::freqHot(body)
     case MapFilter(a, _, body) => freqNormal(a) ::: freqHot(body)
+    case MapWithDefault(m,z) => freqNormal(m) ::: freqHot(z)
     case _ => super.symsFreq(e)
   }
 }
